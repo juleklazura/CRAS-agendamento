@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mt-5">
+    <h1>Bem-vindo ao Sistema de Agendamentos</h1>
+    <p>
+        <a href="{{ url_for('agendar') }}" class="btn btn-primary">Criar novo agendamento</a>
+        <a href="{{ url_for('listar') }}" class="btn btn-secondary">Ver agendamentos</a>
+    </p>
+</div>
+{% endblock %}

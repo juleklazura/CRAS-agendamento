@@ -1,0 +1,44 @@
+<!-- templates/agendar.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">Agendar</h1>
+    <form method="post">
+        {{ form.csrf_token }}
+        <div class="mb-3">
+            {{ form.nome.label(class="form-label") }}
+            {{ form.nome(class="form-control") }}
+        </div>
+        <div class="mb-3">
+            {{ form.cpf.label(class="form-label") }}
+            {{ form.cpf(class="form-control") }}
+        </div>
+        <div class="mb-3">
+            {{ form.telefone.label(class="form-label") }}
+            {{ form.telefone(class="form-control") }}
+        </div>
+        <div class="mb-3">
+            {{ form.data.label(class="form-label") }}
+            {{ form.data(class="form-control", id="data") }}
+        </div>
+        <div class="mb-3">
+            {{ form.horario.label(class="form-label") }}
+            <select name="horario" id="horario" class="form-control">
+                <option value="" disabled selected>Selecione um horário</option>
+                {% for hora in horarios %}
+                    <option value="{{ hora }}">{{ hora }}</option>
+                {% endfor %}
+            </select>
+            {% if form.horario.errors %}
+            <div class="invalid-feedback">
+                {{ form.horario.errors[0] }}
+            </div>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Agendar</button>
+    </form>
+</div>
+
+<script src="{{ url_for('static', filename='agendarhorarios.js') }}"></script>
+{% endblock %}
