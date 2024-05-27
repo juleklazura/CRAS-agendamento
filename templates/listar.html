@@ -4,34 +4,44 @@
 <div class="mt-5">
     <h1>Lista de Agendamentos</h1>
     <hr width="1" size="100">
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>CPF</th>
-                <th>Telefone</th>
-                <th>Data</th>
-                <th>Horário</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for agendamento in agendamentos %}
-            <tr>
-                <td>{{ agendamento.nome }}</td>
-                <td>{{ agendamento.cpf }}</td>
-                <td>{{ agendamento.telefone }}</td>
-                <td>{{ agendamento.data.strftime('%d/%m/%Y') }}</td>
-                <td>{{ agendamento.horario.strftime('%H:%M') }}</td>
-                <td>
-                    <a href="{{ url_for('editar', id=agendamento.id) }}" class="btn btn-warning btn-sm">Editar</a>
-                    <form action="{{ url_for('deletar', id=agendamento.id) }}" method="POST" style="display:inline;">
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja deletar este agendamento?');">Deletar</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% for date, slots_info in slots.items() %}
+    <div>
+        <h2>{{ date.strftime('%d/%m/%Y') }}</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Horário</th>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Telefone</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in slots_info.times %}
+                    {% if slot.agendamento %}
+                        <tr>
+                            <td>{{ slot.time }}</td>
+                            <td>{{ slot.agendamento.nome }}</td>
+                            <td>{{ slot.agendamento.cpf }}</td>
+                            <td>{{ slot.agendamento.telefone }}</td>
+                            <td>
+                                <a href="{{ url_for('editar', id=slot.agendamento.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                                <form action="{{ url_for('deletar', id=slot.agendamento.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja deletar este agendamento?');">Deletar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td>{{ slot.time }}</td>
+                            <td colspan="4">Disponível</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}

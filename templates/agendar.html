@@ -1,4 +1,3 @@
-<!-- templates/agendar.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -24,11 +23,8 @@
         </div>
         <div class="mb-3">
             {{ form.horario.label(class="form-label") }}
-            <select name="horario" id="horario" class="form-control">
+            <select name="horario" id="horario" class="form-control" required> <!-- Adicione o atributo required -->
                 <option value="" disabled selected>Selecione um horário</option>
-                {% for hora in horarios %}
-                    <option value="{{ hora }}">{{ hora }}</option>
-                {% endfor %}
             </select>
             {% if form.horario.errors %}
             <div class="invalid-feedback">
@@ -40,5 +36,21 @@
     </form>
 </div>
 
-<script src="{{ url_for('static', filename='agendarhorarios.js') }}"></script>
+<script>
+document.getElementById('data').addEventListener('change', function() {
+    var data = this.value;
+    fetch('/get_horarios_disponiveis?data=' + data)
+        .then(response => response.json())
+        .then(horarios => {
+            var horarioSelect = document.getElementById('horario');
+            horarioSelect.innerHTML = '<option value="" disabled selected>Selecione um horário</option>';
+            horarios.forEach(function(horario) {
+                var option = document.createElement('option');
+                option.value = horario;
+                option.textContent = horario;
+                horarioSelect.appendChild(option);
+            });
+        });
+});
+</script>
 {% endblock %}
