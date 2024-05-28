@@ -25,9 +25,9 @@
         <div class="mb-3">
             {{ form.horario.label(class="form-label") }}
             <select name="horario" id="horario" class="form-control">
-                <option value="" disabled selected>Selecione um horário</option>
+                <option value="" disabled>Selecione um horário</option>
                 {% for hora in horarios %}
-                    <option value="{{ hora }}" {% if hora == agendamento.horario %} selected {% endif %}>{{ hora }}</option>
+                    <option value="{{ hora }}" {% if hora == agendamento_horario_str %} selected {% endif %}>{{ hora }}</option>
                 {% endfor %}
             </select>
             {% if form.horario.errors %}
@@ -39,19 +39,25 @@
         <button type="submit" class="btn btn-primary">Salvar Alterações</button>
     </form>
 </div>
-<script src="{{ url_for('static', filename='agendarhorarios.js') }}"></script>
-{% endblock %}
-
-
-o index.html:
-{% extends "base.html" %}
-
-{% block content %}
-<div class="mt-5">
-    <h1>Bem-vindo ao Sistema de Agendamentos</h1>
-    <p>
-        <a href="{{ url_for('agendar') }}" class="btn btn-primary">Criar novo agendamento</a>
-        <a href="{{ url_for('listar') }}" class="btn btn-secondary">Ver agendamentos</a>
-    </p>
-</div>
+<script>
+document.getElementById('data').addEventListener('change', function() {
+    var data = this.value;
+    fetch('/get_horarios_disponiveis?data=' + data)
+        .then(response => response.json())
+        .then(horarios => {
+            var horarioSelect = document.getElementById('horario');
+            var currentSelection = '{{ agendamento_horario_str }}';
+            horarioSelect.innerHTML = '<option value="" disabled>Selecione um horário</option>';
+            horarios.forEach(function(horario) {
+                var option = document.createElement('option');
+                option.value = horario;
+                option.textContent = horario;
+                if (horario === currentSelection) {
+                    option.selected = true;
+                }
+                horarioSelect.appendChild(option);
+            });
+        });
+});
+</script>
 {% endblock %}

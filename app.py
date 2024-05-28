@@ -98,6 +98,7 @@ def editar(id):
         return redirect(url_for('listar'))
 
     form = AgendamentoForm(obj=agendamento)
+
     if form.validate_on_submit():
         agendamento.nome = form.nome.data
         agendamento.cpf = form.cpf.data
@@ -107,7 +108,21 @@ def editar(id):
         agendamento.save()
         flash('Agendamento atualizado com sucesso!', 'success')
         return redirect(url_for('listar'))
-    return render_template('editar.html', form=form)
+
+    # Calcular os horários disponíveis para a data do agendamento
+    horarios_disponiveis = get_available_slots(agendamento.data)
+    
+    # Adicionar o horário atual do agendamento se não estiver na lista de horários disponíveis
+    agendamento_horario_str = agendamento.horario.strftime('%H:%M')
+    if agendamento_horario_str not in horarios_disponiveis:
+        horarios_disponiveis.append(agendamento_horario_str)
+        horarios_disponiveis.sort()
+
+    return render_template('editar.html', form=form, agendamento=agendamento, horarios=horarios_disponiveis, agendamento_horario_str=agendamento_horario_str)
+
+
+
+
 
 @app.route('/deletar/<int:id>', methods=['POST'])
 def deletar(id):
