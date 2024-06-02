@@ -1,4 +1,4 @@
-from peewee import Model, CharField, DateField, TimeField, SqliteDatabase
+from peewee import Model, CharField, DateField, TimeField, SqliteDatabase, BooleanField
 
 # Configuração do banco de dados SQLite
 db = SqliteDatabase('agendamentos.db')
@@ -13,7 +13,9 @@ class Agendamento(BaseModel):
     telefone = CharField(max_length=15, null=True)
     data = DateField()
     horario = TimeField()
+    presence = BooleanField(default=False)  # Adicionando o campo presence
 
 # Criar as tabelas se elas não existirem
-db.connect()
-db.create_tables([Agendamento], safe=True)
+if __name__ == '__main__':
+    db.connect()
+    db.create_tables([Agendamento], safe=True)

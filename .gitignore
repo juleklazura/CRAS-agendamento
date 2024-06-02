@@ -1,3 +1,5 @@
 /venv
 **/__pycache__
 agendamentos.db
+/.venv
+/.vscode
