@@ -1,10 +1,14 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
-from forms import AgendamentoForm
-from models import Agendamento, db
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
+from forms import AgendamentoForm, LoginForm
+from models import Agendamento, db, User
 from peewee import IntegrityError
 from datetime import datetime, timedelta, date
 import calendar
 from peewee import BooleanField
+from functools import wraps
+
+
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'minha_chave_secreta'
 
@@ -57,12 +61,43 @@ def get_all_slots_for_week(start_date):
             }
     return all_slots
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Você precisa estar logado para acessar esta página.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.get_or_none(User.username == form.username.data)
+        if user and user.verify_password(form.password.data):
+            session['user_id'] = user.id
+            flash('Login realizado com sucesso!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Credenciais inválidas. Por favor, tente novamente.', 'danger')
+    return render_template('login.html', form=form)
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    flash('Logout realizado com sucesso!', 'success')
+    return redirect(url_for('index'))
+
+
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 
 @app.route('/agendar', methods=['GET', 'POST'])
+@login_required
 def agendar():
     form = AgendamentoForm()
     min_date = date.today().strftime('%Y-%m-%d')  # Define a data mínima como o dia atual
@@ -107,6 +142,7 @@ def agendar():
 
 @app.route('/listar', defaults={'year': None, 'week': None})
 @app.route('/listar/<int:year>/<int:week>')
+@login_required
 def listar(year, week):
     today = date.today()
     if not year or not week:
@@ -122,6 +158,7 @@ def listar(year, week):
     return render_template('listar.html', agendamentos=agendamentos, slots=slots_sorted, datetime=datetime, year=year, week=week)
 
 @app.route('/toggle_presence/<int:id>', methods=['POST'])
+@login_required
 def toggle_presence(id):
     agendamento = Agendamento.get_or_none(Agendamento.id == id)
     if agendamento:
@@ -134,6 +171,7 @@ def toggle_presence(id):
 
 
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
 def editar(id):
     agendamento = Agendamento.get_or_none(Agendamento.id == id)
     if not agendamento:
@@ -198,6 +236,7 @@ def editar(id):
     return render_template('editar.html', form=form, agendamento=agendamento, agendamento_horario_str=agendamento.horario.strftime('%H:%M'), min_date=min_date, horarios=horarios)
 
 @app.route('/deletar/<int:id>', methods=['POST'])
+@login_required
 def deletar(id):
     agendamento = Agendamento.get_or_none(Agendamento.id == id)
     if agendamento:
@@ -208,6 +247,7 @@ def deletar(id):
     return redirect(url_for('listar'))
 
 @app.route('/get_horarios_disponiveis', methods=['GET'])
+@login_required
 def get_horarios_disponiveis():
     data_str = request.args.get('data')
     data = datetime.strptime(data_str, '%Y-%m-%d').date()

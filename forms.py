@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, DateField, TimeField, SubmitField
+from wtforms import StringField, DateField, TimeField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, Length
 
 class AgendamentoForm(FlaskForm):
@@ -9,3 +9,8 @@ class AgendamentoForm(FlaskForm):
     data = DateField('Data', validators=[DataRequired()], format='%Y-%m-%d')
     horario = TimeField('Horário', validators=[DataRequired()], format='%H:%M')
     submit = SubmitField('Agendar')
+
+class LoginForm(FlaskForm):
+    username = StringField('Usuário', validators=[DataRequired()])
+    password = PasswordField('Senha', validators=[DataRequired()])
+    submit = SubmitField('Login')
