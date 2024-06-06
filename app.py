@@ -2,15 +2,17 @@ from flask import Flask, render_template, redirect, url_for, request, flash, jso
 from forms import AgendamentoForm, LoginForm
 from models import Agendamento, db, User
 from peewee import IntegrityError
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 import calendar
 from peewee import BooleanField
 from functools import wraps
-
+from flask_wtf.csrf import CSRFProtect
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'minha_chave_secreta'
+
+csrf = CSRFProtect(app)
 
 def get_available_slots(data):
     hora_inicio_manha = datetime.strptime('08:30', '%H:%M').time()
@@ -62,7 +64,7 @@ def get_all_slots_for_week(start_date):
     return all_slots
 
 def login_required(f):
-    @wraps(f)
+    @wraps(f) 
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Você precisa estar logado para acessar esta página.', 'warning')
@@ -70,17 +72,42 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+
+    # Verificar se a conta está bloqueada
+    blocked_until = session.get('blocked_until')
+    if blocked_until and datetime.now(timezone.utc) < blocked_until:
+        seconds_left = (blocked_until - datetime.now(timezone.utc)).total_seconds()
+        flash(f'Sua conta está bloqueada. Tente novamente após {int(seconds_left)} segundos.', 'danger')
+        form.username.render_kw = {'disabled': True}  # Desativar o campo de nome de usuário
+        form.password.render_kw = {'disabled': True}  # Desativar o campo de senha
+        form.submit.render_kw = {'disabled': True}  # Desativar o botão de envio
+        return render_template('login.html', form=form)
+
     if form.validate_on_submit():
         user = User.get_or_none(User.username == form.username.data)
         if user and user.verify_password(form.password.data):
             session['user_id'] = user.id
             flash('Login realizado com sucesso!', 'success')
+            # Reiniciar contagem de tentativas de login e desbloquear a conta
+            session.pop('login_attempts', None)
+            session.pop('blocked_until', None)
             return redirect(url_for('index'))
         else:
             flash('Credenciais inválidas. Por favor, tente novamente.', 'danger')
+            # Se o login falhar, aumente o contador de tentativas de login malsucedidas
+            session.setdefault('login_attempts', 0)
+            session['login_attempts'] += 1
+            # Bloqueie a conta após 3 tentativas de login malsucedidas
+            if session['login_attempts'] >= 5:
+                flash('Número máximo de tentativas de login excedido. Sua conta foi bloqueada.', 'danger')
+                # Define um tempo de bloqueio de 5 minutos (300 segundos)
+                session['blocked_until'] = datetime.now(timezone.utc) + timedelta(seconds=120)
+            return redirect(url_for('login'))
+
     return render_template('login.html', form=form)
 
 @app.route('/logout')
