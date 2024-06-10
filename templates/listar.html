@@ -6,6 +6,10 @@
         .presence td {
             background-color: #76b344;;
         }
+        .indisponivel td {
+            color: rgb(255, 255, 255);
+            background-color: rgb(255, 83, 83);
+        }
     </style>
     <h1>Lista de Agendamentos</h1>
     <hr width="1" size="100">
@@ -31,16 +35,18 @@
             <tbody>
                 {% for slot in slots_info.times %}
                     {% if slot.agendamento %}
-                        <tr {% if slot.agendamento.presence %}class="presence"{% endif %}>
+                        <tr class="{{ 'presence' if slot.agendamento.presence else 'indisponivel' if slot.agendamento.nome == 'Indisponível' else '' }}">
                             <td>{{ slot.time }}</td>
                             <td>{{ slot.agendamento.nome }}</td>
-                            <td>{{ slot.agendamento.cpf }}</td>
-                            <td>{{ slot.agendamento.telefone }}</td>
+                            <td>{{ slot.agendamento.cpf or '' }}</td>
+                            <td>{{ slot.agendamento.telefone or '' }}</td>
                             <td>
-                                <form action="{{ url_for('toggle_presence', id=slot.agendamento.id) }}" method="POST" style="display: inline;">
-                                    <button type="submit" class="btn btn-info btn-sm">{{ 'Retirar Presença' if slot.agendamento.presence else 'Confirmar Presença' }}</button>
-                                </form>
-                                <a href="{{ url_for('editar', id=slot.agendamento.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                                {% if slot.agendamento.nome != 'Indisponível' %}
+                                    <form action="{{ url_for('toggle_presence', id=slot.agendamento.id) }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn btn-info btn-sm">{{ 'Retirar Presença' if slot.agendamento.presence else 'Confirmar Presença' }}</button>
+                                    </form>
+                                    <a href="{{ url_for('editar', id=slot.agendamento.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                                {% endif %}
                                 <form action="{{ url_for('deletar', id=slot.agendamento.id) }}" method="POST" style="display: inline;">
                                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja deletar este agendamento?');">Deletar</button>
                                 </form>
@@ -49,7 +55,20 @@
                     {% else %}
                         <tr>
                             <td>{{ slot.time }}</td>
-                            <td colspan="4">Disponível</td>
+                            <td colspan="3">Disponível</td>
+                            <td>
+                                
+                                <!-- Adicionar botão de Agendar -->
+                                <form action="{{ url_for('agendar') }}" method="POST" style="display: inline;">
+                                    <input type="hidden" name="data" value="{{ date.strftime('%Y-%m-%d') }}">
+                                    <input type="hidden" name="horario" value="{{ slot.time }}">
+                                    <button type="submit" class="btn btn-success btn-sm">Agendar</button>
+                                </form>
+                                <form action="{{ url_for('ocupar', data=date.strftime('%Y-%m-%d'), horario=slot.time) }}" method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-secondary btn-sm">Ocupar</button>
+                                </form>
+
+                            </td>
                         </tr>
                     {% endif %}
                 {% endfor %}

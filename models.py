@@ -31,6 +31,9 @@ class User(BaseModel):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+
+
+
 # Criar as tabelas se elas não existirem
 if __name__ == '__main__':
     db.connect()

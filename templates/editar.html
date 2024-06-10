@@ -40,15 +40,14 @@
     </form>
 </div>
 <script>
-    document.getElementById('data').addEventListener('change', function() {
-        var data = this.value;
-        var agendamentoHorario = "{{ agendamento_horario_str }}";
+    // Função para preencher os horários disponíveis quando a data é alterada
+    function fillAvailableTimes(data) {
         fetch('/get_horarios_disponiveis?data=' + data)
             .then(response => response.json())
             .then(horarios => {
                 var horarioSelect = document.getElementById('horario');
                 horarioSelect.innerHTML = ''; // Limpa o dropdown de horários
-    
+
                 // Verifica se o dia selecionado é sábado (5) ou domingo (6)
                 if (new Date(data).getDay() === 5 || new Date(data).getDay() === 6) {
                     var option = document.createElement('option');
@@ -63,8 +62,10 @@
                         option.textContent = horario;
                         horarioSelect.appendChild(option);
                     });
-                    // Adiciona o horário atual do agendamento se não estiver nos horários disponíveis
-                    if (!horarios.includes(agendamentoHorario)) {
+
+                    // Se o horário atual do agendamento estiver disponível para a data selecionada, selecione-o
+                    var agendamentoHorario = "{{ agendamento_horario_str }}";
+                    if (horarios.includes(agendamentoHorario)) {
                         var currentOption = document.createElement('option');
                         currentOption.value = agendamentoHorario;
                         currentOption.textContent = agendamentoHorario;
@@ -73,6 +74,18 @@
                     }
                 }
             });
+    }
+
+    // Adicione um ouvinte de evento de mudança à entrada de data
+    document.getElementById('data').addEventListener('change', function() {
+        var data = this.value;
+        fillAvailableTimes(data); // Preencha os horários disponíveis quando a data é alterada
+    });
+
+    // Preencha os horários disponíveis quando a página é carregada
+    document.addEventListener('DOMContentLoaded', function() {
+        var data = document.getElementById('data').value;
+        fillAvailableTimes(data);
     });
 </script>
 {% endblock %}

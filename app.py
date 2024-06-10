@@ -6,17 +6,14 @@ from datetime import datetime, timedelta, date, timezone
 import calendar
 from peewee import BooleanField
 from functools import wraps
-from flask_wtf.csrf import CSRFProtect
-
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'minha_chave_secreta'
 
-csrf = CSRFProtect(app)
 
 def get_available_slots(data):
     hora_inicio_manha = datetime.strptime('08:30', '%H:%M').time()
-    hora_fim_manha = datetime.strptime('11:30', '%H:%M').time()
+    hora_fim_manha = datetime.strptime('11:15', '%H:%M').time()
     hora_inicio_tarde = datetime.strptime('13:00', '%H:%M').time()
     hora_fim_tarde = datetime.strptime('16:00', '%H:%M').time()
     intervalo = timedelta(minutes=15)
@@ -35,6 +32,7 @@ def get_available_slots(data):
         if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == horario_atual_str).exists():
             horarios_disponiveis.append(horario_atual_str)
         horario_atual = (datetime.combine(data, horario_atual) + intervalo).time()
+    horarios_disponiveis = [time for time in horarios_disponiveis if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == time, Agendamento.nome == 'Indisponível').exists()]
 
     return horarios_disponiveis
 
@@ -71,6 +69,30 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+@app.route('/ocupar/<data>/<horario>', methods=['POST'])
+@login_required
+def ocupar(data, horario):
+    horario = datetime.strptime(horario, '%H:%M').time()
+    data = datetime.strptime(data, '%Y-%m-%d').date()
+    
+    # Verificar se o horário está disponível antes de ocupar
+    if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == horario).exists():
+        Agendamento.create(
+            nome='Indisponível',
+            cpf=None,
+            telefone=None,
+            data=data,
+            horario=horario,
+            presence=False
+        )
+        flash('Horário marcado como Indisponível!', 'success')
+    else:
+        flash('Erro: O horário já está Indisponível!', 'danger')
+    
+    # Redirecionar para a página da semana de listagem
+    year, week = data.isocalendar()[0], data.isocalendar()[1]
+    return redirect(url_for('listar', year=year, week=week))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -194,7 +216,15 @@ def toggle_presence(id):
         flash('Status de presença atualizado com sucesso!', 'success')
     else:
         flash('Agendamento não encontrado!', 'danger')
-    return redirect(url_for('listar'))
+    
+    # Redirecionar para a página da semana de listagem
+    if agendamento:
+        year, week = agendamento.data.isocalendar()[0], agendamento.data.isocalendar()[1]
+    else:
+        # Caso o agendamento não seja encontrado, redirecione para a semana atual
+        today = date.today()
+        year, week = today.isocalendar()[0], today.isocalendar()[1]
+    return redirect(url_for('listar', year=year, week=week))
 
 
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])
@@ -271,7 +301,15 @@ def deletar(id):
         flash('Agendamento deletado com sucesso!', 'success')
     else:
         flash('Agendamento não encontrado!', 'danger')
-    return redirect(url_for('listar'))
+    
+    # Redirecionar para a página da semana de listagem
+    if agendamento:
+        year, week = agendamento.data.isocalendar()[0], agendamento.data.isocalendar()[1]
+    else:
+        # Caso o agendamento não seja encontrado, redirecione para a semana atual
+        today = date.today()
+        year, week = today.isocalendar()[0], today.isocalendar()[1]
+    return redirect(url_for('listar', year=year, week=week))
 
 @app.route('/get_horarios_disponiveis', methods=['GET'])
 @login_required
