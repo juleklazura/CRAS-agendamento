@@ -12,11 +12,11 @@
         </div>
         <div class="mb-3">
             {{ form.cpf.label(class="form-label") }}
-            {{ form.cpf(class="form-control") }}
+            {{ form.cpf(class="form-control", id="cpf") }}
         </div>
         <div class="mb-3">
             {{ form.telefone.label(class="form-label") }}
-            {{ form.telefone(class="form-control") }}
+            {{ form.telefone(class="form-control", id="telefone") }}
         </div>
         <div class="mb-3">
             {{ form.data.label(class="form-label") }}
@@ -86,6 +86,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         var data = document.getElementById('data').value;
         fillAvailableTimes(data);
+    $(":input").inputmask();
+    $("#cpf").inputmask({"mask": "999.999.999-99"});
+    $("#telefone").inputmask({"mask": "(99) 99999-9999"});
     });
 </script>
 {% endblock %}

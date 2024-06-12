@@ -10,11 +10,11 @@
         </div>
         <div class="mb-3">
             {{ form.cpf.label(class="form-label") }}
-            {{ form.cpf(class="form-control") }}
+            {{ form.cpf(class="form-control", id="cpf") }}
         </div>
         <div class="mb-3">
             {{ form.telefone.label(class="form-label") }}
-            {{ form.telefone(class="form-control") }}
+            {{ form.telefone(class="form-control", id="telefone") }}
         </div>
         <div class="mb-3">
             {{ form.data.label(class="form-label") }}
@@ -35,31 +35,39 @@
     </form>
 
 
-<script>
-    document.getElementById('data').addEventListener('change', function() {
-        var data = this.value;
-        fetch('/get_horarios_disponiveis?data=' + data)
-            .then(response => response.json())
-            .then(horarios => {
-                var horarioSelect = document.getElementById('horario');
-                horarioSelect.innerHTML = ''; // Limpa o dropdown de horários
-    
-                // Verifica se o dia selecionado é sábado (5) ou domingo (6)
-                if (new Date(data).getDay() === 5 || new Date(data).getDay() === 6) {
-                    var option = document.createElement('option');
-                    option.text = 'Não disponível';
-                    option.disabled = true;
-                    horarioSelect.appendChild(option);
-                } else {
-                    // Popula o dropdown com os horários disponíveis para os dias úteis
-                    horarios.forEach(function(horario) {
-                        var option = document.createElement('option');
-                        option.value = horario;
-                        option.textContent = horario;
-                        horarioSelect.appendChild(option);
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('data').addEventListener('change', function() {
+                var data = this.value;
+                fetch('/get_horarios_disponiveis?data=' + data)
+                    .then(response => response.json())
+                    .then(horarios => {
+                        var horarioSelect = document.getElementById('horario');
+                        horarioSelect.innerHTML = ''; // Limpa o dropdown de horários
+
+                        // Verifica se o dia selecionado é sábado (5) ou domingo (6)
+                        if (new Date(data).getDay() === 5 || new Date(data).getDay() === 6) {
+                            var option = document.createElement('option');
+                            option.text = 'Não disponível';
+                            option.disabled = true;
+                            horarioSelect.appendChild(option);
+                        } else {
+                            // Popula o dropdown com os horários disponíveis para os dias úteis
+                            horarios.forEach(function(horario) {
+                                var option = document.createElement('option');
+                                option.value = horario;
+                                option.textContent = horario;
+                                horarioSelect.appendChild(option);
+                            });
+                        }
                     });
-                }
             });
-    });
+
+            // Aplicar máscara para CPF e telefone
+            $(":input").inputmask();
+            $("#cpf").inputmask({"mask": "999.999.999-99"});
+            $("#telefone").inputmask({"mask": "(99) 99999-9999"});
+        });
     </script>
+
 {% endblock %}

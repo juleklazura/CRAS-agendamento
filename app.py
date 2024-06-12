@@ -167,10 +167,16 @@ def agendar():
             return render_template('agendar.html', form=form, min_date=min_date)
 
         # Verificar se o CPF já está cadastrado, apenas se não estiver vazio
-        if form.cpf.data.strip():  # Verificar se o CPF não está vazio
-            if Agendamento.select().where(Agendamento.cpf == form.cpf.data).exists():
-                flash('Erro: CPF já cadastrado!', 'danger')
-                return render_template('agendar.html', form=form, min_date=min_date)
+        cpf = form.cpf.data.strip()
+        cpf_temp = form.cpf.data.strip().replace('_', '')
+        if not cpf or len(cpf_temp) != 14:
+            flash('CPF deve estar preenchido e ter exatamente 14 caracteres!', 'danger')
+            return render_template('agendar.html', form=form, min_date=min_date)
+
+        # Verificar se o CPF já está cadastrado
+        if Agendamento.select().where(Agendamento.cpf == cpf).exists():
+            flash('Erro: CPF já cadastrado!', 'danger')
+            return render_template('agendar.html', form=form, min_date=min_date)
 
         try:
             novo_agendamento = Agendamento.create(
@@ -268,7 +274,13 @@ def editar(id):
         if selected_horario not in horarios_disponiveis:
             flash('O horário selecionado não está mais disponível!', 'danger')
             return render_template('editar.html', form=form, agendamento=agendamento, agendamento_horario_str=current_horario, min_date=min_date, horarios=horarios_disponiveis)
-
+        
+        cpf = form.cpf.data.strip()
+        cpf_temp = form.cpf.data.strip().replace('_', '')
+        if not cpf or len(cpf_temp) != 14:
+            flash('CPF deve estar preenchido e ter exatamente 14 caracteres!', 'danger')
+            return render_template('agendar.html', form=form, min_date=min_date)
+        
         if form.cpf.data.strip():  # Verificar se o CPF não está vazio
             # Verificar se o CPF já está cadastrado
             if Agendamento.select().where(Agendamento.cpf == form.cpf.data, Agendamento.id != id).exists():
