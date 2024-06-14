@@ -64,10 +64,14 @@
             });
 
             // Aplicar máscara para CPF e telefone
-            $(":input").inputmask();
             $("#cpf").inputmask({"mask": "999.999.999-99"});
-            $("#telefone").inputmask({"mask": "(99) 99999-9999"});
-        });
+            $(document).ready(function() {
+                $("#telefone").inputmask({
+                    mask: ["(99) 9999-9999", "(99) 99999-9999" ],
+                    keepStatic: true
+                });
+    });
+});
     </script>
 
 {% endblock %}
