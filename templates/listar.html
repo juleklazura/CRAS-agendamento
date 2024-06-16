@@ -42,12 +42,14 @@
                             <td>{{ slot.agendamento.telefone or '' }}</td>
                             <td>
                                 {% if slot.agendamento.nome != 'Indisponível' %}
-                                    <form action="{{ url_for('toggle_presence', id=slot.agendamento.id) }}" method="POST" style="display: inline;">
-                                        <button type="submit" class="btn btn-info btn-sm">{{ 'Retirar Presença' if slot.agendamento.presence else 'Confirmar Presença' }}</button>
-                                    </form>
+                                <form action="{{ url_for('toggle_presence', id=slot.agendamento.id) }}" method="POST" style="display: inline;">
+                                    {{ csrf_form.csrf_token }}
+                                    <button type="submit" class="btn btn-info btn-sm">{{ 'Retirar Presença' if slot.agendamento.presence else 'Confirmar Presença' }}</button>
+                                </form>
                                     <a href="{{ url_for('editar', id=slot.agendamento.id) }}" class="btn btn-warning btn-sm">Editar</a>
                                 {% endif %}
                                 <form action="{{ url_for('deletar', id=slot.agendamento.id) }}" method="POST" style="display: inline;">
+                                    {{ csrf_form.csrf_token }}
                                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja deletar este agendamento?');">Deletar</button>
                                 </form>
                             </td>
@@ -57,15 +59,10 @@
                             <td>{{ slot.time }}</td>
                             <td colspan="3">Disponível</td>
                             <td>
-                                
-                                <!-- Adicionar botão de Agendar -->
-                                <form action="{{ url_for('agendar') }}" method="POST" style="display: inline;">
-                                    <input type="hidden" name="data" value="{{ date.strftime('%Y-%m-%d') }}">
-                                    <input type="hidden" name="horario" value="{{ slot.time }}">
-                                    <button type="submit" class="btn btn-success btn-sm">Agendar</button>
                                 </form>
                                 <form action="{{ url_for('ocupar', data=date.strftime('%Y-%m-%d'), horario=slot.time) }}" method="POST" style="display: inline;">
-                                <button type="submit" class="btn btn-secondary btn-sm">Ocupar</button>
+                                    {{ csrf_form.csrf_token }}
+                                    <button type="submit" class="btn btn-danger btn-sm">Ocupar</button>
                                 </form>
 
                             </td>

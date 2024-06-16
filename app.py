@@ -1,15 +1,20 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
-from forms import AgendamentoForm, LoginForm
-from models import Agendamento, db, User
+from forms import AgendamentoForm, LoginForm, CSRFTokenForm
+from models import Agendamento, User
 from peewee import IntegrityError
 from datetime import datetime, timedelta, date, timezone
-import calendar
 from peewee import BooleanField
 from functools import wraps
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'minha_chave_secreta'
 
+# Configurar o CSRFProtect
+csrf = CSRFProtect(app)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True  # Use True em produção com HTTPS
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 def get_available_slots(data):
     hora_inicio_manha = datetime.strptime('08:30', '%H:%M').time()
@@ -149,44 +154,44 @@ def index():
 @login_required
 def agendar():
     form = AgendamentoForm()
-    min_date = date.today().strftime('%Y-%m-%d')  # Define a data mínima como o dia atual
-    form.data.render_kw = {'min': min_date}  # Passa a data mínima para o campo de data
+    min_date = date.today().strftime('%Y-%m-%d')
+
+    # Ajustar a renderização do campo de data
+    form.data.render_kw = {'min': min_date}
 
     if form.validate_on_submit():
         selected_date = form.data.data
         today = date.today()
 
-        # Verificar se a data selecionada é anterior ao dia atual
         if selected_date < today:
             flash('Não é possível agendar em dias anteriores ao atual!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
 
-        # Verificar se a data selecionada é um sábado ou domingo
         if selected_date.weekday() >= 5:
             flash('Não é possível agendar nos sábados e domingos!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
 
-        # Verificar se o CPF já está cadastrado, apenas se não estiver vazio
-        cpf = form.cpf.data.strip()
-        cpf_temp = form.cpf.data.strip().replace('_', '')
-        if not cpf or len(cpf_temp) != 14:
-            flash('CPF deve estar preenchido e ter exatamente 14 caracteres!', 'danger')
+        cpf = form.cpf.data.strip().replace('_', '')
+
+        # Verificar se o CPF está preenchido e tem o formato correto
+        if cpf and len(cpf) != 14:
+            flash('CPF deve ter exatamente 14 caracteres!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
 
-        # Verificar se o CPF já está cadastrado
-        if Agendamento.select().where(Agendamento.cpf == cpf).exists():
+        # Verificar se o CPF já está cadastrado (se não estiver vazio)
+        if cpf and Agendamento.select().where(Agendamento.cpf == cpf).exists():
             flash('Erro: CPF já cadastrado!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
 
         try:
             novo_agendamento = Agendamento.create(
                 nome=form.nome.data,
-                cpf=form.cpf.data,
+                cpf=cpf if cpf else None,  # Armazenar None se o CPF estiver vazio
                 telefone=form.telefone.data,
                 data=selected_date,
                 horario=form.horario.data
             )
-            flash('Agendamento criado com sucesso!', 'success')  # Mensagem de sucesso
+            flash('Agendamento criado com sucesso!', 'success')
             return redirect(url_for('listar'))
         except IntegrityError:
             flash('Erro: CPF já cadastrado!', 'danger')
@@ -210,7 +215,9 @@ def listar(year, week):
     # Ordenar os slots por data
     slots_sorted = dict(sorted(slots.items()))
 
-    return render_template('listar.html', agendamentos=agendamentos, slots=slots_sorted, datetime=datetime, year=year, week=week)
+    csrf_form = CSRFTokenForm()  # Instanciar o formulário CSRFTokenForm
+
+    return render_template('listar.html', agendamentos=agendamentos, slots=slots_sorted, datetime=datetime, year=year, week=week, csrf_form=csrf_form)
 
 @app.route('/toggle_presence/<int:id>', methods=['POST'])
 @login_required
@@ -277,7 +284,7 @@ def editar(id):
         
         cpf = form.cpf.data.strip()
         cpf_temp = form.cpf.data.strip().replace('_', '')
-        if not cpf or len(cpf_temp) != 14:
+        if cpf and len(cpf) != 14:
             flash('CPF deve estar preenchido e ter exatamente 14 caracteres!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
         

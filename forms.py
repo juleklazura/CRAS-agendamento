@@ -15,3 +15,5 @@ class LoginForm(FlaskForm):
     password = PasswordField('Senha', validators=[DataRequired()])
     submit = SubmitField('Login')
 
+class CSRFTokenForm(FlaskForm):
+    pass
