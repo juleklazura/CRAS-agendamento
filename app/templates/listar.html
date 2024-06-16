@@ -74,4 +74,23 @@
     </div>
     {% endfor %}
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Obter a posição atual do scroll quando a página for carregada
+        var scrollPosition = localStorage.getItem('scrollPosition');
+        if (scrollPosition !== null) {
+            window.scrollTo(0, scrollPosition);
+            // Limpar a posição do scroll após restaurá-la para que não afete futuras navegações
+            localStorage.removeItem('scrollPosition');
+        }
+    
+        // Função para salvar a posição do scroll quando a página for recarregada ou redirecionada
+        function saveScrollPosition() {
+            localStorage.setItem('scrollPosition', window.scrollY);
+        }
+    
+        // Salvar a posição do scroll quando a página for descarregada (antes de redirecionar)
+        window.addEventListener('beforeunload', saveScrollPosition);
+    });
+    </script>
 {% endblock %}
