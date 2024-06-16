@@ -1,81 +1,24 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
-from forms import AgendamentoForm, LoginForm, CSRFTokenForm
-from models import Agendamento, User
-from peewee import IntegrityError
-from datetime import datetime, timedelta, date, timezone
-from peewee import BooleanField
+from flask import Blueprint, render_template, redirect, url_for, flash, jsonify, session, request
+from app.forms import AgendamentoForm, LoginForm, CSRFTokenForm
+from app.models import Agendamento, User
+from app.utils import get_available_slots, get_all_slots_for_week
 from functools import wraps
-from flask_wtf.csrf import CSRFProtect
+from datetime import datetime, timedelta, date, timezone
+from peewee import IntegrityError
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'minha_chave_secreta'
+bp = Blueprint('app', __name__)
 
-# Configurar o CSRFProtect
-csrf = CSRFProtect(app)
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True  # Use True em produção com HTTPS
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-
-def get_available_slots(data):
-    hora_inicio_manha = datetime.strptime('08:30', '%H:%M').time()
-    hora_fim_manha = datetime.strptime('11:15', '%H:%M').time()
-    hora_inicio_tarde = datetime.strptime('13:00', '%H:%M').time()
-    hora_fim_tarde = datetime.strptime('16:00', '%H:%M').time()
-    intervalo = timedelta(minutes=15)
-
-    horarios_disponiveis = []
-    horario_atual = hora_inicio_manha
-    while datetime.combine(data, horario_atual) <= datetime.combine(data, hora_fim_manha):
-        horario_atual_str = horario_atual.strftime('%H:%M')
-        if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == horario_atual_str).exists():
-            horarios_disponiveis.append(horario_atual_str)
-        horario_atual = (datetime.combine(data, horario_atual) + intervalo).time()
-
-    horario_atual = hora_inicio_tarde
-    while datetime.combine(data, horario_atual) <= datetime.combine(data, hora_fim_tarde):
-        horario_atual_str = horario_atual.strftime('%H:%M')
-        if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == horario_atual_str).exists():
-            horarios_disponiveis.append(horario_atual_str)
-        horario_atual = (datetime.combine(data, horario_atual) + intervalo).time()
-    horarios_disponiveis = [time for time in horarios_disponiveis if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == time, Agendamento.nome == 'Indisponível').exists()]
-
-    return horarios_disponiveis
-
-def get_all_slots_for_week(start_date):
-    all_slots = {}
-    for i in range(7):
-        current_date = start_date + timedelta(days=i)
-        if current_date.weekday() < 5:  # Exclude weekends
-            available_slots = get_available_slots(current_date)
-            agendamentos = Agendamento.select().where(Agendamento.data == current_date)
-            scheduled_slots = {agendamento.horario.strftime('%H:%M') for agendamento in agendamentos}
-
-            # Criar uma lista de horários com disponibilidade inicialmente
-            all_times = [{'time': time, 'agendamento': None} for time in available_slots if time not in scheduled_slots]
-
-            # Para os horários agendados, adicionar à lista
-            for agendamento in agendamentos:
-                all_times.append({'time': agendamento.horario.strftime('%H:%M'), 'agendamento': agendamento})
-
-            # Ordenar todos os horários
-            all_times.sort(key=lambda x: datetime.strptime(x['time'], '%H:%M'))
-
-            # Criar um dicionário com os horários ordenados
-            all_slots[current_date] = {
-                'times': all_times
-            }
-    return all_slots
 
 def login_required(f):
     @wraps(f) 
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Você precisa estar logado para acessar esta página.', 'warning')
-            return redirect(url_for('login'))
+            return redirect(url_for('app.login'))
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/ocupar/<data>/<horario>', methods=['POST'])
+@bp.route('/ocupar/<data>/<horario>', methods=['POST'])
 @login_required
 def ocupar(data, horario):
     horario = datetime.strptime(horario, '%H:%M').time()
@@ -97,10 +40,10 @@ def ocupar(data, horario):
     
     # Redirecionar para a página da semana de listagem
     year, week = data.isocalendar()[0], data.isocalendar()[1]
-    return redirect(url_for('listar', year=year, week=week))
+    return redirect(url_for('app.listar', year=year, week=week))
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@bp.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
 
@@ -122,7 +65,7 @@ def login():
             # Reiniciar contagem de tentativas de login e desbloquear a conta
             session.pop('login_attempts', None)
             session.pop('blocked_until', None)
-            return redirect(url_for('index'))
+            return redirect(url_for('app.index'))
         else:
             flash('Credenciais inválidas. Por favor, tente novamente.', 'danger')
             # Se o login falhar, aumente o contador de tentativas de login malsucedidas
@@ -133,24 +76,24 @@ def login():
                 flash('Número máximo de tentativas de login excedido. Sua conta foi bloqueada.', 'danger')
                 # Define um tempo de bloqueio de 5 minutos (300 segundos)
                 session['blocked_until'] = datetime.now(timezone.utc) + timedelta(seconds=120)
-            return redirect(url_for('login'))
+            return redirect(url_for('app.login'))
 
     return render_template('login.html', form=form)
 
-@app.route('/logout')
+@bp.route('/logout')
 def logout():
     session.pop('user_id', None)
     flash('Logout realizado com sucesso!', 'success')
-    return redirect(url_for('index'))
+    return redirect(url_for('app.index'))
 
 
-@app.route('/')
+@bp.route('/')
 @login_required
 def index():
     return render_template('index.html')
 
 
-@app.route('/agendar', methods=['GET', 'POST'])
+@bp.route('/agendar', methods=['GET', 'POST'])
 @login_required
 def agendar():
     form = AgendamentoForm()
@@ -192,7 +135,7 @@ def agendar():
                 horario=form.horario.data
             )
             flash('Agendamento criado com sucesso!', 'success')
-            return redirect(url_for('listar'))
+            return redirect(url_for('app.listar'))
         except IntegrityError:
             flash('Erro: CPF já cadastrado!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
@@ -200,8 +143,8 @@ def agendar():
     return render_template('agendar.html', form=form, min_date=min_date)
 
 
-@app.route('/listar', defaults={'year': None, 'week': None})
-@app.route('/listar/<int:year>/<int:week>')
+@bp.route('/listar', defaults={'year': None, 'week': None})
+@bp.route('/listar/<int:year>/<int:week>')
 @login_required
 def listar(year, week):
     today = date.today()
@@ -219,7 +162,7 @@ def listar(year, week):
 
     return render_template('listar.html', agendamentos=agendamentos, slots=slots_sorted, datetime=datetime, year=year, week=week, csrf_form=csrf_form)
 
-@app.route('/toggle_presence/<int:id>', methods=['POST'])
+@bp.route('/toggle_presence/<int:id>', methods=['POST'])
 @login_required
 def toggle_presence(id):
     agendamento = Agendamento.get_or_none(Agendamento.id == id)
@@ -237,16 +180,16 @@ def toggle_presence(id):
         # Caso o agendamento não seja encontrado, redirecione para a semana atual
         today = date.today()
         year, week = today.isocalendar()[0], today.isocalendar()[1]
-    return redirect(url_for('listar', year=year, week=week))
+    return redirect(url_for('app.listar', year=year, week=week))
 
 
-@app.route('/editar/<int:id>', methods=['GET', 'POST'])
+@bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
     agendamento = Agendamento.get_or_none(Agendamento.id == id)
     if not agendamento:
         flash('Agendamento não encontrado!', 'danger')
-        return redirect(url_for('listar'))
+        return redirect(url_for('app.listar'))
 
     form = AgendamentoForm(obj=agendamento)
     min_date = date.today().strftime('%Y-%m-%d')  # Define a data mínima como o dia atual
@@ -301,7 +244,7 @@ def editar(id):
         agendamento.horario = form.horario.data
         agendamento.save()
         flash('Agendamento atualizado com sucesso!', 'success')
-        return redirect(url_for('listar'))
+        return redirect(url_for('app.listar'))
 
     # Garantir que o horário atual esteja disponível no formulário de edição
     horarios = get_available_slots(agendamento.data)
@@ -311,7 +254,7 @@ def editar(id):
 
     return render_template('editar.html', form=form, agendamento=agendamento, agendamento_horario_str=agendamento.horario.strftime('%H:%M'), min_date=min_date, horarios=horarios)
 
-@app.route('/deletar/<int:id>', methods=['POST'])
+@bp.route('/deletar/<int:id>', methods=['POST'])
 @login_required
 def deletar(id):
     agendamento = Agendamento.get_or_none(Agendamento.id == id)
@@ -328,15 +271,12 @@ def deletar(id):
         # Caso o agendamento não seja encontrado, redirecione para a semana atual
         today = date.today()
         year, week = today.isocalendar()[0], today.isocalendar()[1]
-    return redirect(url_for('listar', year=year, week=week))
+    return redirect(url_for('app.listar', year=year, week=week))
 
-@app.route('/get_horarios_disponiveis', methods=['GET'])
+@bp.route('/get_horarios_disponiveis', methods=['GET'])
 @login_required
 def get_horarios_disponiveis():
     data_str = request.args.get('data')
     data = datetime.strptime(data_str, '%Y-%m-%d').date()
     horarios_disponiveis = get_available_slots(data)
     return jsonify(horarios_disponiveis)
-
-if __name__ == '__main__':
-    app.run(debug=True)
