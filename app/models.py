@@ -1,8 +1,16 @@
-from peewee import Model, CharField, DateField, TimeField, SqliteDatabase, BooleanField
+from peewee import Model, CharField, DateField, TimeField, BooleanField, PostgresqlDatabase
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from dotenv import load_dotenv
+import os
 # Configuração do banco de dados SQLite
-db = SqliteDatabase('agendamentos.db')
+load_dotenv()
+
+# Obter a string de conexão do banco de dados a partir do .env
+database_url = os.getenv('DATABASE_URL')
+
+# Configuração do banco de dados PostgreSQL
+db = PostgresqlDatabase(database_url)
+
 
 class BaseModel(Model):
     class Meta:
@@ -10,7 +18,7 @@ class BaseModel(Model):
 
 class Agendamento(BaseModel):
     nome = CharField(max_length=100)
-    cpf = CharField(max_length=11, null=True)
+    cpf = CharField(max_length=14, null=True)
     telefone = CharField(max_length=15, null=True)
     data = DateField()
     horario = TimeField()
@@ -38,3 +46,4 @@ class User(BaseModel):
 if __name__ == '__main__':
     db.connect()
     db.create_tables([Agendamento, User], safe=True)
+    

@@ -3,3 +3,4 @@
 agendamentos.db
 /.venv
 /.vscode
+/.env

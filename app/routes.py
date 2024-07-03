@@ -115,16 +115,21 @@ def agendar():
             return render_template('agendar.html', form=form, min_date=min_date)
 
         cpf = form.cpf.data.strip().replace('_', '')
-
         # Verificar se o CPF está preenchido e tem o formato correto
         if cpf and len(cpf) != 14:
-            flash('CPF deve ter exatamente 14 caracteres!', 'danger')
+            flash('CPF deve ter exatamente 11 dígitos!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
 
         # Verificar se o CPF já está cadastrado (se não estiver vazio)
         if cpf and Agendamento.select().where(Agendamento.cpf == cpf).exists():
             flash('Erro: CPF já cadastrado!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
+        
+        telefone = form.telefone.data.strip().replace('_', '')
+        if telefone and len(telefone) < 14:
+            flash('Telefone deve ter exatamente 10 ou 11 dígitos!', 'danger')
+            return render_template('agendar.html', form=form, min_date=min_date)
+        
 
         try:
             novo_agendamento = Agendamento.create(
@@ -227,15 +232,20 @@ def editar(id):
         
         cpf = form.cpf.data.strip()
         cpf_temp = form.cpf.data.strip().replace('_', '')
-        if cpf and len(cpf) != 14:
+        
+        if cpf and len(cpf_temp) != 14:
             flash('CPF deve estar preenchido e ter exatamente 14 caracteres!', 'danger')
             return render_template('agendar.html', form=form, min_date=min_date)
         
-        if form.cpf.data.strip():  # Verificar se o CPF não está vazio
+        if form.cpf.data.strip(): 
             # Verificar se o CPF já está cadastrado
             if Agendamento.select().where(Agendamento.cpf == form.cpf.data, Agendamento.id != id).exists():
                 flash('Erro: CPF já cadastrado!', 'danger')
                 return render_template('editar.html', form=form, agendamento=agendamento, agendamento_horario_str=agendamento.horario.strftime('%H:%M'), min_date=min_date, horarios=get_available_slots(agendamento.data))
+        telefone = form.telefone.data.strip().replace('_', '')
+        if telefone and len(telefone) < 14:
+            flash('Telefone deve ter exatamente 10 ou 11 dígitos!', 'danger')
+            return render_template('agendar.html', form=form, min_date=min_date)
 
         agendamento.nome = form.nome.data
         agendamento.cpf = form.cpf.data

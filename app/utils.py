@@ -8,24 +8,25 @@ def get_available_slots(data):
     hora_fim_tarde = datetime.strptime('16:00', '%H:%M').time()
     intervalo = timedelta(minutes=15)
 
+    # Obter todos os agendamentos do dia de uma vez
+    agendamentos = Agendamento.select().where(Agendamento.data == data)
+    horarios_ocupados = {agendamento.horario.strftime('%H:%M') for agendamento in agendamentos}
+    horarios_indisponiveis = {agendamento.horario.strftime('%H:%M') for agendamento in agendamentos if agendamento.nome == 'Indisponível'}
+
     horarios_disponiveis = []
-    horario_atual = hora_inicio_manha
-    while datetime.combine(data, horario_atual) <= datetime.combine(data, hora_fim_manha):
-        horario_atual_str = horario_atual.strftime('%H:%M')
-        if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == horario_atual_str).exists():
-            horarios_disponiveis.append(horario_atual_str)
-        horario_atual = (datetime.combine(data, horario_atual) + intervalo).time()
 
-    horario_atual = hora_inicio_tarde
-    while datetime.combine(data, horario_atual) <= datetime.combine(data, hora_fim_tarde):
-        horario_atual_str = horario_atual.strftime('%H:%M')
-        if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == horario_atual_str).exists():
-            horarios_disponiveis.append(horario_atual_str)
-        horario_atual = (datetime.combine(data, horario_atual) + intervalo).time()
+    def adicionar_horarios_disponiveis(hora_inicio, hora_fim):
+        horario_atual = hora_inicio
+        while datetime.combine(data, horario_atual) <= datetime.combine(data, hora_fim):
+            horario_atual_str = horario_atual.strftime('%H:%M')
+            if horario_atual_str not in horarios_ocupados and horario_atual_str not in horarios_indisponiveis:
+                horarios_disponiveis.append(horario_atual_str)
+            horario_atual = (datetime.combine(data, horario_atual) + intervalo).time()
 
-    horarios_disponiveis = [time for time in horarios_disponiveis if not Agendamento.select().where(Agendamento.data == data, Agendamento.horario == time, Agendamento.nome == 'Indisponível').exists()]
+    adicionar_horarios_disponiveis(hora_inicio_manha, hora_fim_manha)
+    adicionar_horarios_disponiveis(hora_inicio_tarde, hora_fim_tarde)
 
-    return horarios_disponiveis
+    return sorted(horarios_disponiveis)
 
 def get_all_slots_for_week(start_date):
     all_slots = {}
@@ -36,17 +37,10 @@ def get_all_slots_for_week(start_date):
             agendamentos = Agendamento.select().where(Agendamento.data == current_date)
             scheduled_slots = {agendamento.horario.strftime('%H:%M') for agendamento in agendamentos}
 
-            # Criar uma lista de horários com disponibilidade inicialmente
-            all_times = [{'time': time, 'agendamento': None} for time in available_slots if time not in scheduled_slots]
-
-            # Para os horários agendados, adicionar à lista
-            for agendamento in agendamentos:
-                all_times.append({'time': agendamento.horario.strftime('%H:%M'), 'agendamento': agendamento})
-
-            # Ordenar todos os horários
+            all_times = [{'time': time, 'agendamento': None} for time in available_slots]
+            all_times += [{'time': agendamento.horario.strftime('%H:%M'), 'agendamento': agendamento} for agendamento in agendamentos]
             all_times.sort(key=lambda x: datetime.strptime(x['time'], '%H:%M'))
 
-            # Criar um dicionário com os horários ordenados
             all_slots[current_date] = {
                 'times': all_times
             }
