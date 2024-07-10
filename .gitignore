@@ -4,3 +4,4 @@ agendamentos.db
 /.venv
 /.vscode
 /.env
+.vercel
