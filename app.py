@@ -3,6 +3,6 @@ import config
 
 # Configura a aplicação usando as configurações do arquivo config.py
 app.config.from_object(config.Config)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+def app():
+    if __name__ == '__main__':
+        app.run(debug=False)
