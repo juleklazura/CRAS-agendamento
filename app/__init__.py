@@ -7,3 +7,9 @@ csrf = CSRFProtect(app)
 
 # Registrar o blueprint
 app.register_blueprint(bp)
+import config
+
+# Configura a aplicação usando as configurações do arquivo config.py
+app.config.from_object(config.Config)
+
+from app import routes
