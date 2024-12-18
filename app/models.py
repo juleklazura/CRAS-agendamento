@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 import os
 # Configuração do banco de dados SQLite
+# Configuração do banco de dados SQLite
 load_dotenv()
 
 # Obter a string de conexão do banco de dados a partir do .env

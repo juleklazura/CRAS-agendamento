@@ -3,10 +3,10 @@ from datetime import datetime, timedelta, date
 
 def get_available_slots(data):
     hora_inicio_manha = datetime.strptime('08:30', '%H:%M').time()
-    hora_fim_manha = datetime.strptime('11:15', '%H:%M').time()
+    hora_fim_manha = datetime.strptime('11:30', '%H:%M').time()
     hora_inicio_tarde = datetime.strptime('13:00', '%H:%M').time()
     hora_fim_tarde = datetime.strptime('16:00', '%H:%M').time()
-    intervalo = timedelta(minutes=15)
+    intervalo = timedelta(minutes=30)
 
     # Obter todos os agendamentos do dia de uma vez
     agendamentos = Agendamento.select().where(Agendamento.data == data)

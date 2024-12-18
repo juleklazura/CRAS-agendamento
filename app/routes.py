@@ -257,12 +257,22 @@ def editar(id):
         return redirect(url_for('app.listar'))
 
     # Garantir que o horário atual esteja disponível no formulário de edição
+    # Garantir que o horário atual esteja disponível no formulário de edição
     horarios = get_available_slots(agendamento.data)
+
+    # Adicionar o horário atual do agendamento à lista, se não estiver presente
     if agendamento.horario.strftime('%H:%M') not in horarios:
         horarios.append(agendamento.horario.strftime('%H:%M'))
         horarios.sort()
 
-    return render_template('editar.html', form=form, agendamento=agendamento, agendamento_horario_str=agendamento.horario.strftime('%H:%M'), min_date=min_date, horarios=horarios)
+    return render_template(
+    'editar.html',
+    form=form,
+    agendamento=agendamento,
+    agendamento_horario_str=agendamento.horario.strftime('%H:%M'),
+    min_date=min_date,
+    horarios=horarios
+)
 
 @bp.route('/deletar/<int:id>', methods=['POST'])
 @login_required

@@ -41,37 +41,32 @@
 </div>
 <script>
     // Função para preencher os horários disponíveis quando a data é alterada
-    function fillAvailableTimes(data) {
+        function fillAvailableTimes(data) {
         fetch('/get_horarios_disponiveis?data=' + data)
             .then(response => response.json())
             .then(horarios => {
                 var horarioSelect = document.getElementById('horario');
                 horarioSelect.innerHTML = ''; // Limpa o dropdown de horários
 
-                // Verifica se o dia selecionado é sábado (5) ou domingo (6)
-                if (new Date(data).getDay() === 5 || new Date(data).getDay() === 6) {
-                    var option = document.createElement('option');
-                    option.text = 'Não disponível';
-                    option.disabled = true;
-                    horarioSelect.appendChild(option);
-                } else {
-                    // Popula o dropdown com os horários disponíveis para os dias úteis
-                    horarios.forEach(function(horario) {
-                        var option = document.createElement('option');
-                        option.value = horario;
-                        option.textContent = horario;
-                        horarioSelect.appendChild(option);
-                    });
+                var agendamentoHorario = "{{ agendamento_horario_str }}"; // Horário atual do agendamento
 
-                    // Se o horário atual do agendamento estiver disponível para a data selecionada, selecione-o
-                    var agendamentoHorario = "{{ agendamento_horario_str }}";
-                    if (horarios.includes(agendamentoHorario)) {
-                        var currentOption = document.createElement('option');
-                        currentOption.value = agendamentoHorario;
-                        currentOption.textContent = agendamentoHorario;
-                        currentOption.selected = true;
-                        horarioSelect.appendChild(currentOption);
+                horarios.forEach(function(horario) {
+                    var option = document.createElement('option');
+                    option.value = horario;
+                    option.textContent = horario;
+                    if (horario === agendamentoHorario) {
+                        option.selected = true; // Pré-selecionar o horário atual
                     }
+                    horarioSelect.appendChild(option);
+                });
+
+                // Caso o horário atual do agendamento não esteja na lista inicial, adicione-o
+                if (!horarios.includes(agendamentoHorario)) {
+                    var option = document.createElement('option');
+                    option.value = agendamentoHorario;
+                    option.textContent = agendamentoHorario + " (Atual)";
+                    option.selected = true; // Pré-selecionar como horário atual
+                    horarioSelect.appendChild(option);
                 }
             });
     }
